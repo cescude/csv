@@ -201,13 +201,7 @@ func main() {
 	if opts.raw {
 		writer := bufio.NewWriter(os.Stdout)
 		outfn = func(cols []string) {
-			for _, v := range cols {
-				_, err := writer.WriteString(v)
-				if err != nil {
-					log.Fatal(err)
-				}
-			}
-			_, err := writer.WriteString("\n")
+			_, err := writer.WriteString(fmt.Sprintln(strings.Join(cols, " ")))
 			if err != nil {
 				log.Fatal(err)
 			}
