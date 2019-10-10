@@ -205,6 +205,10 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
+			err = writer.Flush()
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 	} else {
 		writer := csv.NewWriter(os.Stdout)
@@ -216,6 +220,7 @@ func main() {
 			if err != nil {
 				log.Fatal(nil)
 			}
+			writer.Flush()
 		}
 	}
 
