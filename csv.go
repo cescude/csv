@@ -196,7 +196,7 @@ func printToc(r csv.Reader) {
 func main() {
 	opts := initOptions()
 
-	outfn := func([]string){}
+	var outfn func([]string)
 
 	if opts.raw {
 		writer := bufio.NewWriter(os.Stdout)
