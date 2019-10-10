@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/csv"
 	"flag"
 	"fmt"
@@ -114,6 +115,7 @@ type options struct {
 	printToc  bool
 	squash    bool
 	tsv       bool
+	raw       bool
 }
 
 func initOptions() options {
@@ -121,6 +123,7 @@ func initOptions() options {
 	printToc := flag.Bool("header", false, "Dump the header row w/ index values")
 	squash := flag.Bool("trim", false, "Trim rows that have no data to output")
 	tsv := flag.Bool("tsv", false, "Output in tsv format")
+	raw := flag.Bool("raw", false, "Output raw data")
 
 	flag.Parse()
 
@@ -142,6 +145,7 @@ func initOptions() options {
 	opts.printToc = *printToc
 	opts.squash = *squash
 	opts.tsv = *tsv
+	opts.raw = *raw
 
 	if len(opts.selectors) == 0 {
 		opts.selectors = append(opts.selectors, fromColumn{0})
@@ -150,7 +154,7 @@ func initOptions() options {
 	return opts
 }
 
-func dumpRows(r csv.Reader, w csv.Writer, selectors []selector, squash bool) {
+func dumpRows(r csv.Reader, write func([]string), selectors []selector, squash bool) {
 	for {
 		row, err := r.Read()
 		if err == io.EOF {
@@ -172,16 +176,10 @@ func dumpRows(r csv.Reader, w csv.Writer, selectors []selector, squash bool) {
 				continue
 			}
 
-			err = w.Write(outRow)
-			if err != nil {
-				log.Fatal(err)
-			}
-
+			write(outRow)
 			break
 		}
 	}
-
-	w.Flush()
 }
 
 func printToc(r csv.Reader) {
@@ -198,16 +196,40 @@ func printToc(r csv.Reader) {
 func main() {
 	opts := initOptions()
 
-	reader := csv.NewReader(os.Stdin)
-	writer := csv.NewWriter(os.Stdout)
+	outfn := func([]string){}
 
-	if opts.tsv {
-		writer.Comma = '\t'
+	if opts.raw {
+		writer := bufio.NewWriter(os.Stdout)
+		outfn = func(cols []string) {
+			for _, v := range cols {
+				_, err := writer.WriteString(v)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+			_, err := writer.WriteString("\n")
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	} else {
+		writer := csv.NewWriter(os.Stdout)
+		if opts.tsv {
+			writer.Comma = '\t'
+		}
+		outfn = func(cols []string) {
+			err := writer.Write(cols)
+			if err != nil {
+				log.Fatal(nil)
+			}
+		}
 	}
+
+	reader := csv.NewReader(os.Stdin)
 
 	if opts.printToc {
 		printToc(*reader)
 	} else {
-		dumpRows(*reader, *writer, opts.selectors, opts.squash)
+		dumpRows(*reader, outfn, opts.selectors, opts.squash)
 	}
 }
